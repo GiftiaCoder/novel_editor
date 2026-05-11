@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>文档编辑</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .back-btn {
+            padding: 8px 14px;
+            background-color: rgba(255,255,255,0.25);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 42px;
+            min-width: 58px;
+            touch-action: manipulation;
+        }
+
+        .back-btn:active {
+            transform: scale(0.96);
+            background-color: rgba(255,255,255,0.32);
+        }
+
+        .chapter-title {
+            flex: 1;
+            min-width: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-num {
+            min-width: 1.5em;
+            text-align: right;
+            font-size: 15px;
+            line-height: 1;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .editor-container {
+            position: fixed;
+            top: 58px;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            padding: 14px;
+            background-color: #fafafa;
+        }
+
+        .editor-shell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            overflow: hidden;
+            border-radius: 16px;
+            background-color: white;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .paragraph-numbers {
+            width: auto;
+            min-width: 2.8em;
+            max-width: 6.5em;
+            flex-shrink: 0;
+            padding: 0 8px 0 10px;
+            overflow: hidden;
+            border-right: 1px solid #eef1f6;
+            background: #fbfcff;
+            color: #9aa6b2;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+            font-size: 13px;
+            line-height: 1;
+            text-align: right;
+            user-select: none;
+            font-variant-numeric: tabular-nums;
+            position: relative;
+        }
+
+        .paragraph-numbers-inner {
+            position: relative;
+            height: 100%;
+            will-change: transform;
+        }
+
+        .paragraph-number {
+            position: absolute;
+            right: 8px;
+            height: 1.4em;
+            line-height: 1.4;
+            padding-right: 2px;
+        }
+
+        .paragraph-number.current {
+            color: #764ba2;
+            font-weight: 900;
+            transform: scale(1.08);
+        }
+
+        .editor-wrap {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            padding: 20px 18px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Serif SC', 'Georgia', 'Times New Roman', serif;
+            font-size: 17px;
+            line-height: 2.0;
+            letter-spacing: 0.02em;
+            border: none;
+            resize: none;
+            background-color: white;
+            -webkit-appearance: none;
+            outline: none;
+            color: #2c3e50;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            caret-color: #ff2d55;
+            text-shadow: 0 0 0 rgba(255,45,85,0.45);
+            touch-action: pan-x pan-y;
+        }
+
+        textarea:focus {
+            outline: none;
+            caret-color: #ff2d55;
+            box-shadow: inset 0 0 0 2px rgba(255,45,85,0.16);
+        }
+
+        textarea::selection {
+            background: rgba(255,45,85,0.22);
+        }
+
+        textarea::placeholder {
+            color: #bbb;
+            font-size: 15px;
+            line-height: 2.0;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: #c0c0c0;
+            border-radius: 10px;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(255,255,255,0.95);
+            padding: 12px 16px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .bottom-action-btn {
+            flex: 1;
+            color: white;
+            border: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 48px;
+            touch-action: manipulation;
+            white-space: nowrap;
+        }
+
+        .bottom-action-btn:active {
+            transform: scale(0.97);
+        }
+
+        .format-btn {
+            background: linear-gradient(135deg, #8e9aaf 0%, #5f6f89 100%);
+            box-shadow: 0 2px 8px rgba(95, 111, 137, 0.24);
+        }
+
+        .save-manual-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .save-manual-btn.saving {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            opacity: 0.85;
+        }
+
+        .save-manual-btn.saved {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .save-manual-btn.error {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .save-status {
+            flex: 0 0 auto;
+            min-width: 88px;
+            max-width: 42%;
+            color: #5f6f89;
+            background: #f2f4f8;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none;
+        }
+
+        .save-status.saving { color: #b76e00; background: #fff4df; }
+        .save-status.saved { color: #1e8e4d; background: #e7f7ee; }
+        .save-status.error { color: #c0392b; background: #fdecea; }
+
+        .measure-box {
+            position: absolute;
+            left: -99999px;
+            top: 0;
+            visibility: hidden;
+            pointer-events: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Serif SC', 'Georgia', 'Times New Roman', serif;
+            font-size: 17px;
+            line-height: 2.0;
+            letter-spacing: 0.02em;
+            border: none;
+            box-sizing: border-box;
+        }
+
+        .measure-marker {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            vertical-align: baseline;
+        }
+
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .editor-container {
+                bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+            .bottom-bar {
+                padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            }
+        }
+
+        @media (orientation: landscape) {
+            .toolbar { padding: 8px 14px; }
+            .editor-container { top: 52px; bottom: 70px; }
+            .bottom-bar { padding: 8px 16px; }
+            textarea, .measure-box { font-size: 15px; line-height: 1.8; }
+            textarea { padding: 16px; }
+            .paragraph-numbers { line-height: 1; }
+        }
+
+        @media (max-width: 480px) {
+            .toolbar { padding: 9px 10px; gap: 8px; }
+            .chapter-title { font-size: 14px; }
+            .stats { gap: 8px; }
+            .stat-num { font-size: 14px; }
+            .editor-container { top: 54px; padding: 10px; }
+            textarea, .measure-box { font-size: 16px; line-height: 1.9; }
+            textarea { padding: 16px 14px; }
+            .paragraph-numbers { min-width: 2.5em; padding: 0 7px 0 8px; font-size: 12px; line-height: 1; }
+            .save-status { min-width: 60px; max-width: 28%; padding: 8px 8px; font-size: 12px; }
+            .bottom-action-btn { padding: 10px 8px; font-size: 14px; min-height: 46px; }
+        }
+    
+
+        /* Low-profile office theme override */
+        body {
+            background: #f3f4f6 !important;
+            color: #1f2937 !important;
+        }
+        .toolbar {
+            background: #f7f8fa !important;
+            color: #374151 !important;
+            padding: 8px 12px !important;
+            gap: 8px !important;
+            box-shadow: none !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        .back-btn {
+            background: #fff !important;
+            color: #4b5563 !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            min-height: 32px !important;
+            min-width: 48px !important;
+            padding: 5px 10px !important;
+        }
+        .chapter-title {
+            color: #374151 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+        .stats { gap: 8px !important; color: #6b7280 !important; }
+        .stat-num {
+            color: #6b7280 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            min-width: 1.25em !important;
+        }
+        .editor-container {
+            top: 49px !important;
+            bottom: 56px !important;
+            padding: 8px 10px !important;
+            background: #f3f4f6 !important;
+        }
+        .editor-shell {
+            border-radius: 8px !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: none !important;
+            background: #fff !important;
+        }
+        .paragraph-numbers {
+            min-width: 2.5em !important;
+            max-width: 5.5em !important;
+            padding: 0 7px 0 8px !important;
+            border-right: 1px solid #e5e7eb !important;
+            background: #f9fafb !important;
+            color: #b0b7c3 !important;
+            font-size: 12px !important;
+        }
+        .paragraph-number.current {
+            color: #4b5563 !important;
+            font-weight: 700 !important;
+            transform: none !important;
+        }
+        textarea {
+            padding: 16px 16px !important;
+            font-size: 16px !important;
+            line-height: 1.9 !important;
+            color: #1f2937 !important;
+            background: #fff !important;
+            caret-color: #111827 !important;
+            text-shadow: none !important;
+        }
+        textarea:focus {
+            caret-color: #111827 !important;
+            box-shadow: inset 0 0 0 1px #d1d5db !important;
+        }
+        textarea::selection { background: rgba(156,163,175,0.28) !important; }
+        textarea::placeholder { color: #a0a7b3 !important; font-size: 14px !important; }
+        textarea::-webkit-scrollbar-thumb { background: #d1d5db !important; }
+        .bottom-bar {
+            background: #f7f8fa !important;
+            padding: 8px 12px !important;
+            min-height: 56px !important;
+            box-shadow: none !important;
+            border-top: 1px solid #e5e7eb !important;
+            gap: 8px !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        .save-status {
+            background: transparent !important;
+            color: #6b7280 !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 6px !important;
+            min-height: 32px !important;
+            padding: 5px 8px !important;
+            font-size: 12px !important;
+            max-width: 30% !important;
+        }
+        .save-status.saving,
+        .save-status.saved,
+        .save-status.error {
+            background: transparent !important;
+            color: #6b7280 !important;
+            border-color: #d1d5db !important;
+        }
+        .save-status.error { color: #7f1d1d !important; }
+        .bottom-action-btn,
+        .format-btn,
+        .save-manual-btn {
+            background: #fff !important;
+            color: #4b5563 !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+            min-height: 32px !important;
+            padding: 5px 10px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            transition: none !important;
+        }
+        .save-manual-btn.saving,
+        .save-manual-btn.saved,
+        .save-manual-btn.error {
+            background: #fff !important;
+            color: #4b5563 !important;
+            border-color: #d1d5db !important;
+        }
+        @media (orientation: landscape) {
+            .editor-container { top: 45px !important; bottom: 52px !important; }
+            .bottom-bar { min-height: 52px !important; padding: 7px 12px !important; }
+        }
+        @media (max-width: 480px) {
+            .toolbar { padding: 7px 9px !important; }
+            .editor-container { top: 46px !important; padding: 7px !important; }
+            .stat-num { font-size: 12px !important; }
+            textarea { font-size: 15px !important; padding: 14px 13px !important; }
+            .bottom-action-btn { padding: 5px 8px !important; }
+            .save-status { max-width: 26% !important; }
+        }
+
+
+
+
+
+        /* Keyboard-safe mobile viewport layout
+           visualViewport-aware JS writes inline top/bottom/transform values. */
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+        body.keyboard-visible textarea {
+            scroll-padding-bottom: 96px;
+        }
+        body.keyboard-visible .editor-container,
+        body.keyboard-visible .bottom-bar,
+        body.keyboard-visible .toolbar {
+            transition: none !important;
+        }
+
+
+        .hook-message-panel {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(360px, calc(100vw - 24px));
+            pointer-events: none;
+        }
+
+        .hook-message-card {
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #d0d7de;
+            border-left: 3px solid #2da44e;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+            padding: 10px 12px;
+            color: #24292f;
+            font-size: 13px;
+            line-height: 1.45;
+            pointer-events: auto;
+            animation: hookMessageIn 0.18s ease-out;
+        }
+
+        .hook-message-card.error {
+            border-left-color: #cf222e;
+        }
+
+        .hook-message-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .hook-message-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 180px;
+            overflow: auto;
+        }
+
+        .hook-message-close {
+            border: none;
+            background: transparent;
+            color: #57606a;
+            padding: 0;
+            min-height: 0;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        @keyframes hookMessageIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="back-btn" onclick="goBack()">返回</button>
+        <div class="chapter-title" id="chapterName">-</div>
+        <div class="stats" aria-label="字数、段落数、当前段落">
+            <span class="stat-num" id="wordCount" title="章节字数">0</span>
+            <span class="stat-num" id="paragraphCount" title="段落数">0</span>
+            <span class="stat-num" id="currentParagraph" title="当前光标所在段落">0</span>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="editor-shell">
+            <div class="paragraph-numbers" id="paragraphNumbers"><div class="paragraph-numbers-inner" id="paragraphNumbersInner"></div></div>
+            <div class="editor-wrap">
+                <textarea id="editor" placeholder="开始输入...&#10;&#10;提示：&#10;换行/粘贴后自动格式化&#10;10分钟无操作自动保存&#10;Ctrl+S 保存"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="save-status" id="saveStatus">就绪</div>
+        <button class="bottom-action-btn format-btn" id="formatBtn" onclick="manualFormat()">全文格式化</button>
+        <button class="bottom-action-btn save-manual-btn" id="saveBtn" onclick="manualSave()">保存</button>
+    </div>
+    <div class="measure-box" id="measureBox"></div>
+
+    <script>
+
+        // ---------- 登录认证 / payload 解密 ----------
+        // 认证信息只保存在 localStorage，不再写入 cookie。
+        // 这样 fetch/header 请求不会携带 Cookie，页面跳转/下载则通过 URL 上的 timestamp + fingerprint 完成认证。
+        const AUTH_STORE_USER = 'novelAuthUsername';
+        const AUTH_STORE_PASS = 'novelAuthPassword';
+        const LEGACY_AUTH_COOKIE_USER = 'novelAuthUsername';
+        const LEGACY_AUTH_COOKIE_PASS = 'novelAuthPassword';
+
+        function clearLegacyAuthCookies() {
+            document.cookie = `${encodeURIComponent(LEGACY_AUTH_COOKIE_USER)}=; Max-Age=0; Path=/; SameSite=Lax`;
+            document.cookie = `${encodeURIComponent(LEGACY_AUTH_COOKIE_PASS)}=; Max-Age=0; Path=/; SameSite=Lax`;
+        }
+
+        function clearAuthCookies() {
+            // 保留函数名，兼容页面中已有调用；实际清理 localStorage 和旧版 cookie。
+            localStorage.removeItem(AUTH_STORE_USER);
+            localStorage.removeItem(AUTH_STORE_PASS);
+            clearLegacyAuthCookies();
+        }
+
+        function getAuthCredentials() {
+            return {
+                username: localStorage.getItem(AUTH_STORE_USER) || '',
+                password: localStorage.getItem(AUTH_STORE_PASS) || ''
+            };
+        }
+
+        clearLegacyAuthCookies();
+
+        function fnv1a64Hex(value) {
+            let hash = 0xcbf29ce484222325n;
+            const prime = 0x100000001b3n;
+            const mask = 0xffffffffffffffffn;
+            const bytes = new TextEncoder().encode(value);
+            for (const b of bytes) {
+                hash ^= BigInt(b);
+                hash = (hash * prime) & mask;
+            }
+            return hash.toString(16).padStart(16, '0');
+        }
+
+        function makeAuthFingerprint(username, password, timestamp) {
+            return fnv1a64Hex(`${username}\n${password}\n${timestamp}`);
+        }
+
+        function makeAuthHeaders(timestamp = String(Date.now())) {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) throw new Error('未登录');
+            return {
+                'X-Auth-Timestamp': timestamp,
+                'X-Auth-Fingerprint': makeAuthFingerprint(username, password, timestamp)
+            };
+        }
+
+        function authUrl(url, forcedTimestamp = null) {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) return '/login.html';
+            const timestamp = forcedTimestamp || String(Date.now());
+            const sep = url.includes('?') ? '&' : '?';
+            return `${url}${sep}timestamp=${encodeURIComponent(timestamp)}&fingerprint=${encodeURIComponent(makeAuthFingerprint(username, password, timestamp))}`;
+        }
+
+        function base64ToBytes(base64) {
+            const binary = atob(base64 || '');
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes;
+        }
+
+        function bytesToBase64(bytes) {
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.subarray(i, i + chunkSize);
+                binary += String.fromCharCode.apply(null, chunk);
+            }
+            return btoa(binary);
+        }
+
+        function cryptBytesWithTimestamp(bytes, timestamp) {
+            const creds = getAuthCredentials();
+            let state = BigInt('0x' + fnv1a64Hex(`${creds.username}\n${creds.password}\n${timestamp}`));
+            const mask = 0xffffffffffffffffn;
+            const multiplier = 2685821657736338717n;
+            const out = new Uint8Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) {
+                state ^= state >> 12n;
+                state = (state ^ ((state << 25n) & mask)) & mask;
+                state ^= state >> 27n;
+                const rnd = (state * multiplier) & mask;
+                const key = Number((rnd >> BigInt((i % 8) * 8)) & 0xffn);
+                out[i] = bytes[i] ^ key;
+            }
+            return out;
+        }
+
+        function encryptPayloadObject(obj, timestamp) {
+            const plainBytes = new TextEncoder().encode(JSON.stringify(obj));
+            return {
+                timestamp,
+                payload: bytesToBase64(cryptBytesWithTimestamp(plainBytes, timestamp))
+            };
+        }
+
+        function decryptPayload(payload, timestamp) {
+            const bytes = base64ToBytes(payload);
+            const out = cryptBytesWithTimestamp(bytes, timestamp);
+            return JSON.parse(new TextDecoder().decode(out));
+        }
+
+        function redirectToLogin(loginUrl = '/login.html') {
+            const target = loginUrl || '/login.html';
+            const currentPath = window.location.pathname || '';
+            if (!currentPath.endsWith('/login.html')) {
+                window.location.href = target;
+            }
+        }
+
+        function failAuthAndRedirect(message = '认证失败', loginUrl = '/login.html') {
+            clearAuthCookies();
+            redirectToLogin(loginUrl);
+            throw new Error(message);
+        }
+
+        function isAuthFailurePayload(wrapped) {
+            if (!wrapped || typeof wrapped !== 'object') return false;
+            if (wrapped.login) return true;
+            if (wrapped.success === false && !wrapped.payload) return true;
+            const errorText = String(wrapped.error || '');
+            return /缺少认证信息|认证失败|认证信息错误|用户名或密码错误|时间戳/.test(errorText);
+        }
+
+        async function authFetch(url, options = {}) {
+            const headers = new Headers(options.headers || {});
+            const timestamp = String(Date.now());
+            let authHeaders;
+            try {
+                authHeaders = makeAuthHeaders(timestamp);
+            } catch (e) {
+                failAuthAndRedirect(e.message || '未登录');
+            }
+            Object.entries(authHeaders).forEach(([k, v]) => headers.set(k, v));
+
+            const fetchOptions = { ...options };
+            delete fetchOptions.encryptedJson;
+
+            if (options.encryptedJson !== undefined) {
+                headers.set('Content-Type', 'application/json');
+                fetchOptions.body = JSON.stringify(encryptPayloadObject(options.encryptedJson, timestamp));
+            }
+
+            let response;
+            try {
+                response = await fetch(authUrl(url, timestamp), { ...fetchOptions, headers, cache: 'no-store', redirect: 'manual', credentials: 'omit' });
+            } catch (e) {
+                throw e;
+            }
+
+            if (response.type === 'opaqueredirect' || response.redirected || [301, 302, 303, 307, 308].includes(response.status)) {
+                failAuthAndRedirect('认证失败，请重新登录');
+            }
+
+            const text = await response.text();
+            let wrapped = null;
+            try { wrapped = text ? JSON.parse(text) : null; } catch (_) {}
+
+            if (response.status === 401 || response.status === 403 || isAuthFailurePayload(wrapped)) {
+                failAuthAndRedirect((wrapped && wrapped.error) || '认证失败，请重新登录', (wrapped && wrapped.login) || '/login.html');
+            }
+            if (!response.ok) {
+                throw new Error((wrapped && wrapped.error) || `请求失败 ${response.status}`);
+            }
+            if (wrapped && wrapped.payload && wrapped.timestamp) {
+                try {
+                    return decryptPayload(wrapped.payload, wrapped.timestamp);
+                } catch (e) {
+                    failAuthAndRedirect('认证信息错误，请重新登录');
+                }
+            }
+            return wrapped;
+        }
+
+        function ensureLoggedInOnPage() {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) {
+                failAuthAndRedirect('未登录');
+            }
+        }
+
+        ensureLoggedInOnPage();
+
+        const DEFAULT_UI_CONFIG = {
+            autoSaveDelayMs: 600000,
+            hookMessagePollIntervalMs: 2500,
+            hookSuccessMessageDurationMs: 60000,
+            toastVisibleMs: 2000,
+            toastFadeMs: 300,
+            pullRefreshLockMs: 800,
+            statusResetDelayMs: 2000,
+            saveButtonResetDelayMs: 1500,
+            errorButtonResetDelayMs: 2000,
+            pasteFormatDelayMs: 10,
+            lineBreakFormatDelayMs: 0,
+            touchStatsDelayMs: 0,
+            hiddenAutoSaveCheckIntervalMs: 1000
+        };
+        let UI_CONFIG = { ...DEFAULT_UI_CONFIG };
+
+        async function loadUIConfig() {
+            try {
+                const data = await authFetch('/ui-config.json');
+                if (!data || typeof data !== 'object') return;
+                UI_CONFIG = { ...DEFAULT_UI_CONFIG, ...data };
+            } catch (e) {
+                UI_CONFIG = { ...DEFAULT_UI_CONFIG };
+            }
+        }
+
+        let currentChapter = '';
+        let currentType = '';
+        let saveTimer = null;
+        let contentChanged = false;
+        let isSaving = false;
+        let lastSavedContent = '';
+        let saveButton = null;
+        let renderTimer = null;
+        const MIN_EDITOR_FONT_SIZE = 12;
+        const MAX_EDITOR_FONT_SIZE = 30;
+        let editorFontSize = null;
+        let pinchStartDistance = 0;
+        let pinchStartFontSize = 0;
+
+        function getUrlParameter(name) {
+            name = name.replace(/[[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getCurrentEditorFontSize() {
+            const editor = document.getElementById('editor');
+            const current = editorFontSize || parseFloat(window.getComputedStyle(editor).fontSize) || 16;
+            return clamp(current, MIN_EDITOR_FONT_SIZE, MAX_EDITOR_FONT_SIZE);
+        }
+
+        function applyEditorFontSize(size, persist = true) {
+            const editor = document.getElementById('editor');
+            const measure = document.getElementById('measureBox');
+            editorFontSize = clamp(Math.round(size * 10) / 10, MIN_EDITOR_FONT_SIZE, MAX_EDITOR_FONT_SIZE);
+            editor.style.setProperty('font-size', `${editorFontSize}px`, 'important');
+            if (measure) measure.style.setProperty('font-size', `${editorFontSize}px`, 'important');
+            if (persist) localStorage.setItem('editorFontSizePx', String(editorFontSize));
+            scheduleRender();
+        }
+
+        function adjustEditorFontSize(delta) {
+            applyEditorFontSize(getCurrentEditorFontSize() + delta);
+            updateSaveStatus(`字号 ${Math.round(editorFontSize)}`, 'saved');
+        }
+
+        function resetEditorFontSize() {
+            localStorage.removeItem('editorFontSizePx');
+            editorFontSize = null;
+            const editor = document.getElementById('editor');
+            editor.style.removeProperty('font-size');
+            const measure = document.getElementById('measureBox');
+            if (measure) measure.style.removeProperty('font-size');
+            scheduleRender();
+            updateSaveStatus('字号已重置', 'saved');
+        }
+
+        function initEditorFontZoom() {
+            const savedSize = parseFloat(localStorage.getItem('editorFontSizePx'));
+            if (Number.isFinite(savedSize)) applyEditorFontSize(savedSize, false);
+
+            document.addEventListener('wheel', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    adjustEditorFontSize(e.deltaY < 0 ? 1 : -1);
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    pinchStartDistance = getTouchDistance(e.touches);
+                    pinchStartFontSize = getCurrentEditorFontSize();
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && pinchStartDistance > 0) {
+                    e.preventDefault();
+                    const distance = getTouchDistance(e.touches);
+                    const ratio = distance / pinchStartDistance;
+                    applyEditorFontSize(pinchStartFontSize * ratio);
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    pinchStartDistance = 0;
+                    pinchStartFontSize = 0;
+                }
+            }, { passive: false });
+        }
+
+        function autoFormatText(text) {
+            if (!text) return text;
+            const normalized = text.replace(/\r\n/g, '\n');
+            const paragraphs = normalized
+                .split(/\n+/)
+                .map(line => line.replace(/^[ \t　]+/, '').trimEnd())
+                .filter(line => line.trim());
+
+            return paragraphs.map(paragraph => {
+                if (paragraph.startsWith('>') ||
+                    paragraph.startsWith('- ') ||
+                    paragraph.startsWith('* ') ||
+                    paragraph.startsWith('#')) {
+                    return paragraph;
+                }
+                return '　　' + paragraph.replace(/^[ \t　]+/, '');
+            }).join('\n\n');
+        }
+
+        function formatLineBreakAtCaret() {
+            const editor = document.getElementById('editor');
+            const pos = editor.selectionStart || 0;
+            const value = editor.value.replace(/\r\n/g, '\n');
+            if (editor.value !== value) editor.value = value;
+
+            const before = value.slice(0, pos);
+            const after = value.slice(pos);
+            if (!before.endsWith('\n')) return false;
+
+            const previousText = before.replace(/\n+$/, '');
+            if (!previousText.trim()) return false;
+
+            const nextText = after.replace(/^[ \t　]*/, '');
+            const normalizedBefore = before.endsWith('\n\n') ? before : before + '\n';
+            const nextPrefix = nextText.trim() ? '' : '　　';
+            editor.value = normalizedBefore + nextPrefix + nextText;
+            const newPos = normalizedBefore.length + nextPrefix.length;
+            editor.setSelectionRange(newPos, newPos);
+            return true;
+        }
+
+        function formatEditorContent(showToast = false) {
+            const editor = document.getElementById('editor');
+            const oldValue = editor.value;
+            const oldStart = editor.selectionStart || 0;
+            const oldEnd = editor.selectionEnd || oldStart;
+            const formattedValue = autoFormatText(oldValue);
+            const formattedStart = autoFormatText(oldValue.slice(0, oldStart)).length;
+            const formattedEnd = autoFormatText(oldValue.slice(0, oldEnd)).length;
+
+            if (formattedValue !== oldValue) {
+                editor.value = formattedValue;
+                const safeStart = Math.min(formattedStart, formattedValue.length);
+                const safeEnd = Math.min(formattedEnd, formattedValue.length);
+                editor.setSelectionRange(safeStart, safeEnd);
+                contentChanged = removeFormatForSave(formattedValue) !== lastSavedContent;
+                scheduleRender();
+                if (showToast) updateSaveStatus('已格式化', 'saved');
+            } else if (showToast) {
+                updateSaveStatus('格式已正确', 'saved');
+            }
+            updateStatsOnly();
+            return formattedValue;
+        }
+
+        function removeFormatForSave(text) {
+            if (!text) return text;
+            return text.replace(/\r\n/g, '\n');
+        }
+
+        function escapeHtmlForMeasure(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getParagraphs(text) {
+            const result = [];
+            if (!text || !text.trim()) return result;
+            const regex = /[^\n]*\S[^\n]*/g;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const value = match[0];
+                result.push({ text: value, start: match.index, end: match.index + value.length });
+                if (match.index === regex.lastIndex) regex.lastIndex++;
+            }
+            return result;
+        }
+
+        function getCurrentParagraphNumber(text, caretPos) {
+            const paragraphs = getParagraphs(text);
+            if (!paragraphs.length) return 0;
+            for (let i = 0; i < paragraphs.length; i++) {
+                if (caretPos < paragraphs[i].start) return Math.max(1, i);
+                if (caretPos <= paragraphs[i].end) return i + 1;
+            }
+            return paragraphs.length;
+        }
+
+        function updateStatsOnly() {
+            const editor = document.getElementById('editor');
+            const text = editor.value;
+            const paragraphs = getParagraphs(text);
+            const wordCount = text.replace(/\s/g, '').length;
+            const current = getCurrentParagraphNumber(text, editor.selectionStart || 0);
+            document.getElementById('wordCount').textContent = wordCount;
+            document.getElementById('paragraphCount').textContent = paragraphs.length;
+            document.getElementById('currentParagraph').textContent = current;
+            highlightCurrentParagraph(current);
+        }
+
+        function updateStats() {
+            updateStatsOnly();
+        }
+
+        function syncNumberScroll() {
+            const editor = document.getElementById('editor');
+            const inner = document.getElementById('paragraphNumbersInner');
+            inner.style.transform = `translateY(${-editor.scrollTop}px)`;
+        }
+
+        function syncMeasureStyle(editor, measure) {
+            const computed = window.getComputedStyle(editor);
+            measure.style.width = editor.clientWidth + 'px';
+            measure.style.minHeight = editor.scrollHeight + 'px';
+            measure.style.fontSize = computed.fontSize;
+            measure.style.lineHeight = computed.lineHeight;
+            measure.style.letterSpacing = computed.letterSpacing;
+            measure.style.fontFamily = computed.fontFamily;
+            measure.style.paddingTop = computed.paddingTop;
+            measure.style.paddingRight = computed.paddingRight;
+            measure.style.paddingBottom = computed.paddingBottom;
+            measure.style.paddingLeft = computed.paddingLeft;
+            measure.style.whiteSpace = computed.whiteSpace;
+        }
+
+        function buildMeasuredHtml(text, paragraphs) {
+            let html = '';
+            let cursor = 0;
+            paragraphs.forEach((paragraph, index) => {
+                html += escapeHtmlForMeasure(text.slice(cursor, paragraph.start));
+                html += `<span class="measure-marker" data-p="${index + 1}"></span>`;
+                html += escapeHtmlForMeasure(text.slice(paragraph.start, paragraph.end));
+                cursor = paragraph.end;
+            });
+            html += escapeHtmlForMeasure(text.slice(cursor));
+            if (html.endsWith('\n')) html += ' ';
+            return html || ' ';
+        }
+
+        function renderParagraphNumbers() {
+            const editor = document.getElementById('editor');
+            const inner = document.getElementById('paragraphNumbersInner');
+            const measure = document.getElementById('measureBox');
+            const text = editor.value;
+            const paragraphs = getParagraphs(text);
+            const current = getCurrentParagraphNumber(text, editor.selectionStart || 0);
+            const computed = window.getComputedStyle(editor);
+            const lineHeight = parseFloat(computed.lineHeight) || 32;
+
+            syncMeasureStyle(editor, measure);
+            measure.innerHTML = buildMeasuredHtml(text, paragraphs);
+
+            inner.innerHTML = '';
+            inner.style.height = editor.scrollHeight + 'px';
+
+            if (!paragraphs.length) {
+                const item = document.createElement('span');
+                item.className = 'paragraph-number current';
+                item.textContent = '0';
+                item.style.top = computed.paddingTop;
+                inner.appendChild(item);
+                syncNumberScroll();
+                updateStatsOnly();
+                return;
+            }
+
+            const markers = measure.querySelectorAll('.measure-marker');
+            markers.forEach((marker, index) => {
+                const item = document.createElement('span');
+                item.className = 'paragraph-number' + (index + 1 === current ? ' current' : '');
+                item.textContent = String(index + 1);
+                const top = marker.offsetTop;
+                item.style.top = `${top + Math.max(0, (lineHeight - item.offsetHeight) / 2)}px`;
+                inner.appendChild(item);
+            });
+
+            syncNumberScroll();
+            updateStatsOnly();
+        }
+
+        function scheduleRender() {
+            if (renderTimer) cancelAnimationFrame(renderTimer);
+            renderTimer = requestAnimationFrame(() => {
+                renderParagraphNumbers();
+                renderTimer = null;
+            });
+        }
+
+        function highlightCurrentParagraph(current) {
+            document.querySelectorAll('.paragraph-number.current').forEach(el => el.classList.remove('current'));
+            if (!current) return;
+            const nums = Array.from(document.querySelectorAll('.paragraph-number')).filter(el => el.textContent.trim());
+            const target = nums[current - 1];
+            if (target) target.classList.add('current');
+        }
+
+        function updateSaveStatus(message, type) {
+            const statusDiv = document.getElementById('saveStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'save-status ' + type;
+
+            if (saveButton) {
+                if (type === 'saving') {
+                    saveButton.textContent = '保存中...';
+                    saveButton.classList.add('saving');
+                    saveButton.classList.remove('saved', 'error');
+                } else if (type === 'saved') {
+                    saveButton.textContent = '已保存';
+                    saveButton.classList.add('saved');
+                    saveButton.classList.remove('saving', 'error');
+                    setTimeout(() => {
+                        if (saveButton && !isSaving) {
+                            saveButton.textContent = '保存';
+                            saveButton.classList.remove('saved');
+                        }
+                    }, UI_CONFIG.saveButtonResetDelayMs);
+                } else if (type === 'error') {
+                    saveButton.textContent = '失败';
+                    saveButton.classList.add('error');
+                    saveButton.classList.remove('saving', 'saved');
+                    setTimeout(() => {
+                        if (saveButton && !isSaving) {
+                            saveButton.textContent = '保存';
+                            saveButton.classList.remove('error');
+                        }
+                    }, UI_CONFIG.errorButtonResetDelayMs);
+                } else if (!isSaving) {
+                    saveButton.textContent = '保存';
+                    saveButton.classList.remove('saving', 'saved', 'error');
+                }
+            }
+
+            if (window.statusTimeout) clearTimeout(window.statusTimeout);
+            if (type !== 'saved' || message !== '就绪') {
+                window.statusTimeout = setTimeout(() => {
+                    const currentStatus = document.getElementById('saveStatus');
+                    if (currentStatus.textContent === message && !contentChanged) {
+                        currentStatus.className = 'save-status';
+                        currentStatus.textContent = '就绪';
+                    } else if (contentChanged && currentStatus.textContent === message) {
+                        currentStatus.className = 'save-status saving';
+                        currentStatus.textContent = '编辑中...';
+                    }
+                }, UI_CONFIG.statusResetDelayMs);
+            }
+        }
+
+        async function loadContent() {
+            try {
+                updateSaveStatus('加载中...', 'saving');
+                const data = await authFetch(`/api/content/${encodeURIComponent(currentChapter)}/${currentType}`);
+
+                if (data.success) {
+                    const editor = document.getElementById('editor');
+                    let content = data.content || '';
+                    content = autoFormatText(content);
+                    editor.value = content;
+                    lastSavedContent = removeFormatForSave(content);
+                    contentChanged = false;
+                    scheduleRender();
+                    updateSaveStatus('加载成功', 'saved');
+                    setTimeout(() => {
+                        if (!contentChanged) updateSaveStatus('就绪', 'saved');
+                    }, UI_CONFIG.saveButtonResetDelayMs);
+                } else {
+                    updateSaveStatus('加载失败', 'error');
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                updateSaveStatus('加载失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveContent(showToast = true, isManual = false) {
+            if (isSaving) return;
+            formatEditorContent(false);
+            const content = document.getElementById('editor').value;
+            const saveContent = removeFormatForSave(content);
+
+            if (saveContent === lastSavedContent) {
+                if (showToast) {
+                    updateSaveStatus('内容未变化', 'saved');
+                    setTimeout(() => {
+                        if (!contentChanged) updateSaveStatus('就绪', 'saved');
+                    }, UI_CONFIG.saveButtonResetDelayMs);
+                }
+                return;
+            }
+
+            isSaving = true;
+            if (showToast) updateSaveStatus(isManual ? '手动保存中...' : '自动保存中...', 'saving');
+
+            try {
+                const data = await authFetch(`/api/content/${encodeURIComponent(currentChapter)}/${currentType}`, {
+                    method: 'POST',
+                    encryptedJson: { content: saveContent }
+                });
+
+                if (data.success) {
+                    lastSavedContent = saveContent;
+                    contentChanged = false;
+                    if (showToast) {
+                        updateSaveStatus(isManual ? '✓ 手动保存成功！' : '✓ 已自动保存', 'saved');
+                        setTimeout(() => {
+                            if (!contentChanged) updateSaveStatus('就绪', 'saved');
+                        }, UI_CONFIG.saveButtonResetDelayMs);
+                    }
+                    if (isManual && window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+                } else {
+                    updateSaveStatus('保存失败: ' + (data.error || '未知错误'), 'error');
+                    if (isManual && window.navigator && window.navigator.vibrate) window.navigator.vibrate(200);
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                updateSaveStatus('保存失败: ' + error.message, 'error');
+                if (isManual && window.navigator && window.navigator.vibrate) window.navigator.vibrate(200);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        function manualFormat() {
+            if (isSaving) {
+                updateSaveStatus('正在保存中，请稍候...', 'saving');
+                return;
+            }
+            formatEditorContent(true);
+            const editor = document.getElementById('editor');
+            const contentForSave = removeFormatForSave(editor.value);
+            contentChanged = contentForSave !== lastSavedContent;
+            if (contentChanged) {
+                if (saveTimer) clearTimeout(saveTimer);
+                saveTimer = setTimeout(() => {
+                    if (contentChanged && !isSaving) saveContent(false, false);
+                    saveTimer = null;
+                }, UI_CONFIG.autoSaveDelayMs);
+            }
+        }
+
+        async function manualSave() {
+            if (isSaving) {
+                updateSaveStatus('正在保存中，请稍候...', 'saving');
+                return;
+            }
+            await saveContent(true, true);
+        }
+
+        function onContentChange(e) {
+            const editor = document.getElementById('editor');
+            const inputType = e && e.inputType ? e.inputType : '';
+            if (inputType === 'insertLineBreak' || inputType === 'insertParagraph') {
+                setTimeout(() => {
+                    formatLineBreakAtCaret();
+                    const afterFormat = removeFormatForSave(editor.value);
+                    contentChanged = afterFormat !== lastSavedContent;
+                    scheduleRender();
+                    updateStatsOnly();
+                }, UI_CONFIG.lineBreakFormatDelayMs);
+            }
+            const contentForSave = removeFormatForSave(editor.value);
+            scheduleRender();
+
+            if (contentForSave === lastSavedContent) {
+                if (contentChanged) {
+                    contentChanged = false;
+                    updateSaveStatus('就绪', 'saved');
+                }
+                return;
+            }
+
+            if (!contentChanged) {
+                contentChanged = true;
+                updateSaveStatus('编辑中...', 'saving');
+            }
+
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                if (contentChanged && !isSaving) saveContent(false, false);
+                saveTimer = null;
+            }, UI_CONFIG.autoSaveDelayMs);
+        }
+
+        function onPaste(e) {
+            setTimeout(() => {
+                formatEditorContent(false);
+                onContentChange({ inputType: 'insertFromPaste' });
+            }, UI_CONFIG.pasteFormatDelayMs);
+        }
+
+        function goBack() {
+            if (contentChanged && !isSaving) {
+                if (confirm('内容已更改但未保存，确定要离开吗？\n\n点击“确定”离开，点击“取消”继续编辑')) {
+                    window.location.href = authUrl('/index.html');
+                }
+            } else {
+                window.location.href = authUrl('/index.html');
+            }
+        }
+
+        function handleSaveShortcut(e) {
+            const rawKey = e.key || '';
+            const key = rawKey.toLowerCase();
+            if (e.ctrlKey || e.metaKey) {
+                if (key === 's') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!isSaving) manualSave();
+                    return false;
+                }
+                if (rawKey === '+' || rawKey === '=' || key === 'add') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    adjustEditorFontSize(1);
+                    return false;
+                }
+                if (rawKey === '-' || key === 'subtract') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    adjustEditorFontSize(-1);
+                    return false;
+                }
+                if (rawKey === '0') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    resetEditorFontSize();
+                    return false;
+                }
+            }
+        }
+
+
+
+        // ---------- 手机输入法安全布局 ----------
+        // 目标：键盘弹出时根据 visualViewport 的真实可视区域，动态调整编辑区和底部按钮栏。
+        // 这样 textarea 的底部不会被输入法遮住，底栏也会贴在键盘上方。
+        let keyboardLayoutTimer = null;
+        let lastKeyboardInset = 0;
+
+        function getViewportInfo() {
+            const vv = window.visualViewport;
+            const layoutHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const layoutWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            if (!vv) {
+                return {
+                    top: 0,
+                    left: 0,
+                    width: layoutWidth,
+                    height: layoutHeight,
+                    bottomInset: 0
+                };
+            }
+
+            const visibleTop = Math.max(0, vv.offsetTop || 0);
+            const visibleLeft = Math.max(0, vv.offsetLeft || 0);
+            const visibleHeight = Math.max(0, vv.height || layoutHeight);
+            const visibleWidth = Math.max(0, vv.width || layoutWidth);
+            const visibleBottom = visibleTop + visibleHeight;
+            const bottomInset = Math.max(0, layoutHeight - visibleBottom);
+
+            return {
+                top: visibleTop,
+                left: visibleLeft,
+                width: visibleWidth,
+                height: visibleHeight,
+                bottomInset
+            };
+        }
+
+        const MANUAL_SCROLL_CARET_SUPPRESS_MS = 1200;
+        let suppressCaretAutoScrollUntil = 0;
+        let editorTouchStartY = 0;
+        let editorTouchMoved = false;
+
+        function suppressCaretAutoScroll(ms = MANUAL_SCROLL_CARET_SUPPRESS_MS) {
+            suppressCaretAutoScrollUntil = Math.max(suppressCaretAutoScrollUntil, Date.now() + ms);
+        }
+
+        function shouldAutoScrollCaret() {
+            return Date.now() >= suppressCaretAutoScrollUntil;
+        }
+
+        function updateKeyboardSafeLayout() {
+            const toolbar = document.querySelector('.toolbar');
+            const editorContainer = document.querySelector('.editor-container');
+            const bottomBar = document.querySelector('.bottom-bar');
+            const editor = document.getElementById('editor');
+            if (!toolbar || !editorContainer || !bottomBar || !editor) return;
+
+            const viewport = getViewportInfo();
+            const toolbarHeight = toolbar.offsetHeight || 0;
+            const bottomBarHeight = bottomBar.offsetHeight || 0;
+            const layoutHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const isKeyboardVisible = viewport.bottomInset > 80 || (window.visualViewport && viewport.height < layoutHeight * 0.82);
+
+            document.body.classList.toggle('keyboard-visible', !!isKeyboardVisible);
+            document.documentElement.style.setProperty('--keyboard-inset-bottom', `${viewport.bottomInset}px`);
+
+            // iOS Safari 会让 visualViewport 出现 offsetTop；Android Chrome 通常主要表现为 height 变小。
+            // 注意：原 CSS 里 .editor-container 的 top/bottom 使用了 !important。
+            // 这里也必须用 setProperty(..., 'important')，否则键盘弹出时 JS 写入值会被 CSS 覆盖。
+            toolbar.style.transform = viewport.top > 0 ? `translateY(${viewport.top}px)` : '';
+            bottomBar.style.transform = '';
+            bottomBar.style.setProperty('bottom', `${viewport.bottomInset}px`, 'important');
+
+            const bottomGap = isKeyboardVisible ? 14 : 0;
+            const topPx = Math.round(viewport.top + toolbarHeight);
+            const bottomPx = Math.round(viewport.bottomInset + bottomBarHeight + bottomGap);
+            editorContainer.style.setProperty('top', `${topPx}px`, 'important');
+            editorContainer.style.setProperty('bottom', `${bottomPx}px`, 'important');
+
+            // 用显式 height 兜底：某些移动端首次唤起键盘时，fixed + bottom 的重排会晚一拍。
+            // height 同步写入后，textarea 的 clientHeight 会立即变成“工具栏上方”的高度。
+            const safeHeight = Math.max(120, layoutHeight - topPx - bottomPx);
+            editorContainer.style.setProperty('height', `${safeHeight}px`, 'important');
+
+            // 留一点滚动补偿，避免最后一行/光标贴着底部工具栏。
+            editor.style.scrollPaddingBottom = `${bottomBarHeight + bottomGap + 40}px`;
+
+            lastKeyboardInset = viewport.bottomInset;
+            scheduleRender();
+            if (document.activeElement === editor && shouldAutoScrollCaret()) {
+                requestAnimationFrame(() => {
+                    if (shouldAutoScrollCaret()) ensureTextareaCaretVisible(editor);
+                });
+            }
+        }
+
+        function scheduleKeyboardSafeLayout() {
+            if (keyboardLayoutTimer) cancelAnimationFrame(keyboardLayoutTimer);
+            keyboardLayoutTimer = requestAnimationFrame(() => {
+                updateKeyboardSafeLayout();
+                keyboardLayoutTimer = null;
+            });
+        }
+
+        function measureTextareaCaret(editor) {
+            const markerText = '\u200b';
+            const div = document.createElement('div');
+            const style = window.getComputedStyle(editor);
+            const props = [
+                'boxSizing', 'width', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+                'letterSpacing', 'textTransform', 'wordSpacing', 'textIndent', 'lineHeight',
+                'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth',
+                'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'whiteSpace',
+                'wordWrap', 'overflowWrap'
+            ];
+            div.style.position = 'absolute';
+            div.style.left = '-99999px';
+            div.style.top = '0';
+            div.style.visibility = 'hidden';
+            div.style.overflow = 'hidden';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.wordWrap = 'break-word';
+            div.style.overflowWrap = 'break-word';
+            props.forEach(prop => { div.style[prop] = style[prop]; });
+            div.style.height = 'auto';
+            div.style.minHeight = '0';
+
+            const before = editor.value.slice(0, editor.selectionStart || 0);
+            div.textContent = before;
+            const marker = document.createElement('span');
+            marker.textContent = markerText;
+            div.appendChild(marker);
+            document.body.appendChild(div);
+            const top = marker.offsetTop;
+            const height = marker.offsetHeight || parseFloat(style.lineHeight) || 24;
+            div.remove();
+            return { top, bottom: top + height, height };
+        }
+
+        function ensureTextareaCaretVisible(editor) {
+            if (!editor || document.activeElement !== editor) return;
+            try {
+                const caret = measureTextareaCaret(editor);
+                const lineHeight = caret.height || parseFloat(window.getComputedStyle(editor).lineHeight) || 24;
+                const safePadding = Math.max(24, lineHeight * 1.5);
+                const visibleTop = editor.scrollTop + safePadding;
+                const visibleBottom = editor.scrollTop + editor.clientHeight - safePadding;
+
+                if (caret.bottom > visibleBottom) {
+                    editor.scrollTop = Math.max(0, caret.bottom - editor.clientHeight + safePadding);
+                } else if (caret.top < visibleTop) {
+                    editor.scrollTop = Math.max(0, caret.top - safePadding);
+                }
+
+                // 光标已经在文档最后一小段时，直接贴到底部最可靠，解决首次打开后点末尾被底栏遮住的问题。
+                if ((editor.selectionStart || 0) >= editor.value.length - 2) {
+                    editor.scrollTop = editor.scrollHeight;
+                }
+            } catch (e) {
+                // 兜底：至少让 textarea 本体进入可视区域。
+                try { editor.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) { editor.scrollIntoView(false); }
+            }
+            syncNumberScroll();
+            scheduleRender();
+        }
+
+        function scrollEditorCaretIntoViewSoon() {
+            const editor = document.getElementById('editor');
+            if (!editor || document.activeElement !== editor || !shouldAutoScrollCaret()) return;
+            [40, 120, 260, 520, 820].forEach(delay => {
+                setTimeout(() => {
+                    if (!shouldAutoScrollCaret()) return;
+                    updateKeyboardSafeLayout();
+                    requestAnimationFrame(() => {
+                        if (shouldAutoScrollCaret()) ensureTextareaCaretVisible(editor);
+                    });
+                }, delay);
+            });
+        }
+
+        function initKeyboardSafeLayout() {
+            scheduleKeyboardSafeLayout();
+
+            window.addEventListener('resize', scheduleKeyboardSafeLayout, { passive: true });
+            window.addEventListener('orientationchange', () => {
+                setTimeout(scheduleKeyboardSafeLayout, 80);
+                setTimeout(scheduleKeyboardSafeLayout, 320);
+            }, { passive: true });
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleKeyboardSafeLayout, { passive: true });
+                window.visualViewport.addEventListener('scroll', scheduleKeyboardSafeLayout, { passive: true });
+            }
+
+            const editor = document.getElementById('editor');
+            if (editor) {
+                editor.addEventListener('focus', () => {
+                    setTimeout(scheduleKeyboardSafeLayout, 50);
+                    setTimeout(scheduleKeyboardSafeLayout, 180);
+                    setTimeout(scheduleKeyboardSafeLayout, 360);
+                    setTimeout(scrollEditorCaretIntoViewSoon, 420);
+                });
+                editor.addEventListener('blur', () => {
+                    setTimeout(scheduleKeyboardSafeLayout, 80);
+                    setTimeout(scheduleKeyboardSafeLayout, 260);
+                });
+                editor.addEventListener('input', scrollEditorCaretIntoViewSoon);
+                editor.addEventListener('click', scrollEditorCaretIntoViewSoon);
+                editor.addEventListener('keyup', scrollEditorCaretIntoViewSoon);
+
+                // 区分“轻点定位光标”和“拖拽滚动查看文本”：
+                // 轻点时仍然让光标进入可视区；拖拽滚动时暂停自动回光标，避免页面弹回原光标位置。
+                editor.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        editorTouchStartY = e.touches[0].clientY;
+                        editorTouchMoved = false;
+                    }
+                }, { passive: true });
+
+                editor.addEventListener('touchmove', (e) => {
+                    if (e.touches.length === 1) {
+                        const dy = Math.abs(e.touches[0].clientY - editorTouchStartY);
+                        if (dy > 8) {
+                            editorTouchMoved = true;
+                            suppressCaretAutoScroll();
+                        }
+                    }
+                }, { passive: true });
+
+                editor.addEventListener('touchend', () => {
+                    if (editorTouchMoved) {
+                        suppressCaretAutoScroll();
+                        return;
+                    }
+                    scrollEditorCaretIntoViewSoon();
+                }, { passive: true });
+            }
+        }
+
+        let beforeUnloadHandler = function(e) {
+            if (contentChanged && !isSaving) {
+                e.preventDefault();
+                e.returnValue = '内容已更改但未保存，确定要离开吗？';
+                return e.returnValue;
+            }
+        };
+
+        async function init() {
+            currentChapter = getUrlParameter('chapter');
+            currentType = getUrlParameter('type');
+            saveButton = document.getElementById('saveBtn');
+
+            if (!currentChapter || !currentType) {
+                alert('缺少必要参数，将返回首页');
+                window.location.href = authUrl('/index.html');
+                return;
+            }
+
+            document.getElementById('chapterName').textContent = decodeURIComponent(currentChapter);
+            document.title = `${decodeURIComponent(currentChapter)} | 小说编辑器`;
+
+            const editor = document.getElementById('editor');
+            initEditorFontZoom();
+            initKeyboardSafeLayout();
+            await loadContent();
+            scheduleKeyboardSafeLayout();
+
+            editor.addEventListener('input', onContentChange);
+            editor.addEventListener('paste', onPaste);
+            editor.addEventListener('scroll', syncNumberScroll);
+            editor.addEventListener('click', updateStats);
+            editor.addEventListener('keyup', updateStats);
+            editor.addEventListener('select', updateStats);
+            editor.addEventListener('touchend', function() {
+                setTimeout(updateStats, UI_CONFIG.touchStatsDelayMs);
+            });
+            document.addEventListener('selectionchange', () => {
+                if (document.activeElement === editor) updateStats();
+            });
+            window.addEventListener('resize', () => { scheduleRender(); scheduleKeyboardSafeLayout(); });
+            document.addEventListener('keydown', handleSaveShortcut, true);
+            window.addEventListener('beforeunload', beforeUnloadHandler);
+            startHookMessagePolling();
+
+            setInterval(() => {
+                if (contentChanged && !isSaving && document.visibilityState === 'hidden') {
+                    saveContent(false, false);
+                }
+            }, UI_CONFIG.hiddenAutoSaveCheckIntervalMs);
+        }
+
+        async function bootstrap() {
+            await loadUIConfig();
+            await init();
+        }
+
+        bootstrap();
+
+
+        const HOOK_MESSAGE_LAST_ID_KEY = 'novelEditorHookMessageLastId';
+        let hookMessagePollingTimer = null;
+
+
+        function hookEscapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function getHookOperationLabel(operation) {
+            const labels = {
+                create_chapter: '创建章节',
+                rename_chapter: '重命名章节',
+                delete_chapter: '删除章节',
+                save_outline: '保存章纲',
+                save_body: '保存正文'
+            };
+            return labels[operation] || operation || 'Hook';
+        }
+
+        function showHookMessageToast(message) {
+            let panel = document.getElementById('hookMessagePanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'hookMessagePanel';
+                panel.className = 'hook-message-panel';
+                document.body.appendChild(panel);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'hook-message-card' + (message.success ? '' : ' error');
+            const title = `${getHookOperationLabel(message.operation)} ${message.success ? '完成' : '失败'}`;
+            const exitText = typeof message.exit_code === 'number' ? `code ${message.exit_code}` : '';
+            card.innerHTML = `
+                <div class="hook-message-title">
+                    <span>${hookEscapeHtml(title)} ${hookEscapeHtml(exitText)}</span>
+                    <button class="hook-message-close" type="button" aria-label="关闭">×</button>
+                </div>
+                <div class="hook-message-text">${hookEscapeHtml(message.message || '')}</div>
+            `;
+            card.querySelector('.hook-message-close').onclick = () => card.remove();
+            panel.appendChild(card);
+            while (panel.children.length > 5) panel.firstElementChild.remove();
+            if (message.success) {
+                setTimeout(() => {
+                    if (card.parentNode) card.remove();
+                }, UI_CONFIG.hookSuccessMessageDurationMs);
+            }
+        }
+
+        async function pollHookMessages() {
+            try {
+                const since = Number(localStorage.getItem(HOOK_MESSAGE_LAST_ID_KEY) || '0') || 0;
+                const data = await authFetch(`/api/hook-messages?since=${since}`, { cache: 'no-store' });
+                if (!data.success || !Array.isArray(data.messages)) return;
+
+                let maxId = since;
+                for (const msg of data.messages) {
+                    if (typeof msg.id === 'number' && msg.id > maxId) maxId = msg.id;
+                    showHookMessageToast(msg);
+                }
+                if (maxId > since) {
+                    localStorage.setItem(HOOK_MESSAGE_LAST_ID_KEY, String(maxId));
+                }
+            } catch (e) {
+                // 轮询失败不影响主功能
+            }
+        }
+
+        function startHookMessagePolling() {
+            if (hookMessagePollingTimer) return;
+            pollHookMessages();
+            hookMessagePollingTimer = setInterval(pollHookMessages, UI_CONFIG.hookMessagePollIntervalMs);
+        }
+
+    </script>
+</body>
+</html>

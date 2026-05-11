@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f5f5f5">
+    <title>文档管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --panel-soft: #fafafa;
+            --line: #dedede;
+            --line-soft: #eeeeee;
+            --text: #202124;
+            --muted: #6f6f6f;
+            --subtle: #9a9a9a;
+            --accent: #4b5563;
+            --danger: #9f1d1d;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1120px;
+            margin: 0 auto;
+            background: var(--panel);
+            min-height: 100vh;
+            border-left: 1px solid var(--line-soft);
+            border-right: 1px solid var(--line-soft);
+        }
+
+        .header {
+            background: #f8f8f8;
+            color: var(--text);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .header h1 {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+
+        .header p {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .add-chapter {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(255,255,255,0.96);
+            border-bottom: 1px solid var(--line-soft);
+            padding: 10px 12px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .input-group input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+            color: var(--text);
+            -webkit-appearance: none;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #9ca3af;
+            box-shadow: 0 0 0 2px rgba(107,114,128,0.10);
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        .btn-primary,
+        .sort-toggle-btn,
+        .btn-compact,
+        .btn-export {
+            border: 1px solid var(--line);
+            background: #ffffff;
+            color: var(--text);
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s, transform 0.05s;
+            touch-action: manipulation;
+        }
+
+        .btn-primary:hover,
+        .sort-toggle-btn:hover,
+        .btn-compact:hover,
+        .btn-export:hover {
+            background: #f3f4f6;
+            border-color: #c7c7c7;
+        }
+
+        .btn-primary:active,
+        .sort-toggle-btn:active,
+        .btn-compact:active,
+        .btn-export:active {
+            transform: scale(0.99);
+            background: #eeeeee;
+        }
+
+        .sort-toggle-btn {
+            flex: 0 0 auto;
+            min-height: 36px;
+            padding: 7px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            white-space: nowrap;
+            color: var(--accent);
+        }
+
+        .btn-primary {
+            min-height: 36px;
+            min-width: 72px;
+            padding: 7px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            color: var(--accent);
+        }
+
+        .sort-hint {
+            margin-top: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--subtle);
+        }
+
+        .chapters-list {
+            padding: 10px 12px 18px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 54px 20px;
+            color: var(--muted);
+        }
+
+        .empty-state h3 {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .no-chapters-icon {
+            display: none;
+        }
+
+        .chapter-card {
+            background: #fff;
+            border: 1px solid var(--line-soft);
+            border-radius: 6px;
+            padding: 9px 10px;
+            margin-bottom: 8px;
+            box-shadow: none;
+        }
+
+        .chapter-card:hover {
+            border-color: var(--line);
+            background: #fcfcfc;
+        }
+
+        .chapter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .chapter-name-area {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+            padding: 2px 0;
+        }
+
+        .chapter-name-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            word-break: break-word;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 1.45;
+        }
+
+        .badge-number {
+            border: 1px solid #e5e7eb;
+            background: #fafafa;
+            color: var(--muted);
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .btn-compact {
+            min-height: 30px;
+            padding: 5px 9px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-outline-compact,
+        .btn-body-compact {
+            color: var(--accent);
+        }
+
+        .btn-delete-compact {
+            color: var(--danger);
+        }
+
+        .export-bar {
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            display: flex;
+            gap: 8px;
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+            background: rgba(255,255,255,0.96);
+            border-top: 1px solid var(--line);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .btn-export {
+            flex: 1;
+            min-height: 36px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100vw - 32px);
+            background: rgba(40,40,40,0.92);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            text-align: center;
+            z-index: 1000;
+            font-size: 13px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast-success { background: rgba(55,65,81,0.94); }
+        .toast-error { background: rgba(127,29,29,0.94); }
+
+        .skeleton-card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 1px solid var(--line-soft);
+        }
+
+        .skeleton-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .skeleton-title,
+        .skeleton-btn {
+            background: #eeeeee;
+            border-radius: 4px;
+        }
+
+        .skeleton-title {
+            height: 20px;
+            width: 42%;
+        }
+
+        .skeleton-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .skeleton-btn {
+            width: 56px;
+            height: 28px;
+        }
+
+        .hook-message-panel {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(360px, calc(100vw - 24px));
+            pointer-events: none;
+        }
+
+        .hook-message-card {
+            background: rgba(255,255,255,0.98);
+            border: 1px solid var(--line);
+            border-left: 3px solid #4b5563;
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            padding: 9px 10px;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.45;
+            pointer-events: auto;
+        }
+
+        .hook-message-card.error {
+            border-left-color: var(--danger);
+        }
+
+        .hook-message-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .hook-message-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 180px;
+            overflow: auto;
+            color: var(--muted);
+        }
+
+        .hook-message-close {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            padding: 0;
+            min-height: 0;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                border-left: none;
+                border-right: none;
+            }
+
+            .header {
+                padding: 10px 12px;
+                align-items: center;
+            }
+
+            .header h1 {
+                font-size: 14px;
+            }
+
+            .header p {
+                display: none;
+            }
+
+            .add-chapter {
+                padding: 8px 10px;
+            }
+
+            .input-group {
+                gap: 6px;
+            }
+
+            .sort-toggle-btn {
+                font-size: 12px;
+                padding: 6px 8px;
+                min-height: 34px;
+            }
+
+            .btn-primary {
+                min-width: 58px;
+                min-height: 34px;
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+
+            .input-group input {
+                font-size: 14px;
+                padding: 7px 8px;
+            }
+
+            .sort-hint {
+                display: none;
+            }
+
+            .chapters-list {
+                padding: 8px 10px 14px;
+            }
+
+            .chapter-row {
+                gap: 8px;
+            }
+
+            .action-buttons {
+                gap: 4px;
+            }
+
+            .btn-compact {
+                padding: 5px 7px;
+                font-size: 12px;
+            }
+
+            .export-bar {
+                padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!--h1>文档管理</h1-->
+            <!--p>章节按序号排序；无序号排最后</p-->
+        </div>
+        
+        <div class="add-chapter">
+            <div class="input-group">
+                <button class="sort-toggle-btn" id="sortToggleBtn" onclick="toggleSortOrder()">降序</button>
+                <input type="text" id="newChapterName" placeholder="章节名，例如：1. 风起云涌 / 1.5 暗流 / 番外" onkeypress="handleKeyPress(event)" autocomplete="off">
+                <button class="btn-primary" onclick="addChapter()">创建</button>
+            </div>
+            <!--div class="sort-hint">有序号按数值排序；无序号排最后并按字典序</div-->
+        </div>
+        
+        <div class="chapters-list" id="chaptersList">
+            <div class="skeleton-card">
+                <div class="skeleton-row">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-buttons">
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-row">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-buttons">
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                        <div class="skeleton-btn"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="export-bar">
+            <button class="btn-export" onclick="downloadFullDocx('outline')">章纲全文下载</button>
+            <button class="btn-export" onclick="downloadFullDocx('body')">正文全文下载</button>
+        </div>
+    </div>
+    
+    <script>
+
+        // ---------- 登录认证 / payload 解密 ----------
+        // 认证信息只保存在 localStorage，不再写入 cookie。
+        // 这样 fetch/header 请求不会携带 Cookie，页面跳转/下载则通过 URL 上的 timestamp + fingerprint 完成认证。
+        const AUTH_STORE_USER = 'novelAuthUsername';
+        const AUTH_STORE_PASS = 'novelAuthPassword';
+        const LEGACY_AUTH_COOKIE_USER = 'novelAuthUsername';
+        const LEGACY_AUTH_COOKIE_PASS = 'novelAuthPassword';
+
+        function clearLegacyAuthCookies() {
+            document.cookie = `${encodeURIComponent(LEGACY_AUTH_COOKIE_USER)}=; Max-Age=0; Path=/; SameSite=Lax`;
+            document.cookie = `${encodeURIComponent(LEGACY_AUTH_COOKIE_PASS)}=; Max-Age=0; Path=/; SameSite=Lax`;
+        }
+
+        function clearAuthCookies() {
+            // 保留函数名，兼容页面中已有调用；实际清理 localStorage 和旧版 cookie。
+            localStorage.removeItem(AUTH_STORE_USER);
+            localStorage.removeItem(AUTH_STORE_PASS);
+            clearLegacyAuthCookies();
+        }
+
+        function getAuthCredentials() {
+            return {
+                username: localStorage.getItem(AUTH_STORE_USER) || '',
+                password: localStorage.getItem(AUTH_STORE_PASS) || ''
+            };
+        }
+
+        clearLegacyAuthCookies();
+
+        function fnv1a64Hex(value) {
+            let hash = 0xcbf29ce484222325n;
+            const prime = 0x100000001b3n;
+            const mask = 0xffffffffffffffffn;
+            const bytes = new TextEncoder().encode(value);
+            for (const b of bytes) {
+                hash ^= BigInt(b);
+                hash = (hash * prime) & mask;
+            }
+            return hash.toString(16).padStart(16, '0');
+        }
+
+        function makeAuthFingerprint(username, password, timestamp) {
+            return fnv1a64Hex(`${username}\n${password}\n${timestamp}`);
+        }
+
+        function makeAuthHeaders(timestamp = String(Date.now())) {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) throw new Error('未登录');
+            return {
+                'X-Auth-Timestamp': timestamp,
+                'X-Auth-Fingerprint': makeAuthFingerprint(username, password, timestamp)
+            };
+        }
+
+        function authUrl(url, forcedTimestamp = null) {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) return '/login.html';
+            const timestamp = forcedTimestamp || String(Date.now());
+            const sep = url.includes('?') ? '&' : '?';
+            return `${url}${sep}timestamp=${encodeURIComponent(timestamp)}&fingerprint=${encodeURIComponent(makeAuthFingerprint(username, password, timestamp))}`;
+        }
+
+        function base64ToBytes(base64) {
+            const binary = atob(base64 || '');
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes;
+        }
+
+        function bytesToBase64(bytes) {
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.subarray(i, i + chunkSize);
+                binary += String.fromCharCode.apply(null, chunk);
+            }
+            return btoa(binary);
+        }
+
+        function cryptBytesWithTimestamp(bytes, timestamp) {
+            const creds = getAuthCredentials();
+            let state = BigInt('0x' + fnv1a64Hex(`${creds.username}\n${creds.password}\n${timestamp}`));
+            const mask = 0xffffffffffffffffn;
+            const multiplier = 2685821657736338717n;
+            const out = new Uint8Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) {
+                state ^= state >> 12n;
+                state = (state ^ ((state << 25n) & mask)) & mask;
+                state ^= state >> 27n;
+                const rnd = (state * multiplier) & mask;
+                const key = Number((rnd >> BigInt((i % 8) * 8)) & 0xffn);
+                out[i] = bytes[i] ^ key;
+            }
+            return out;
+        }
+
+        function encryptPayloadObject(obj, timestamp) {
+            const plainBytes = new TextEncoder().encode(JSON.stringify(obj));
+            return {
+                timestamp,
+                payload: bytesToBase64(cryptBytesWithTimestamp(plainBytes, timestamp))
+            };
+        }
+
+        function decryptPayload(payload, timestamp) {
+            const bytes = base64ToBytes(payload);
+            const out = cryptBytesWithTimestamp(bytes, timestamp);
+            return JSON.parse(new TextDecoder().decode(out));
+        }
+
+        function redirectToLogin(loginUrl = '/login.html') {
+            const target = loginUrl || '/login.html';
+            const currentPath = window.location.pathname || '';
+            if (!currentPath.endsWith('/login.html')) {
+                window.location.href = target;
+            }
+        }
+
+        function failAuthAndRedirect(message = '认证失败', loginUrl = '/login.html') {
+            clearAuthCookies();
+            redirectToLogin(loginUrl);
+            throw new Error(message);
+        }
+
+        function isAuthFailurePayload(wrapped) {
+            if (!wrapped || typeof wrapped !== 'object') return false;
+            if (wrapped.login) return true;
+            if (wrapped.success === false && !wrapped.payload) return true;
+            const errorText = String(wrapped.error || '');
+            return /缺少认证信息|认证失败|认证信息错误|用户名或密码错误|时间戳/.test(errorText);
+        }
+
+        async function authFetch(url, options = {}) {
+            const headers = new Headers(options.headers || {});
+            const timestamp = String(Date.now());
+            let authHeaders;
+            try {
+                authHeaders = makeAuthHeaders(timestamp);
+            } catch (e) {
+                failAuthAndRedirect(e.message || '未登录');
+            }
+            Object.entries(authHeaders).forEach(([k, v]) => headers.set(k, v));
+
+            const fetchOptions = { ...options };
+            delete fetchOptions.encryptedJson;
+
+            if (options.encryptedJson !== undefined) {
+                headers.set('Content-Type', 'application/json');
+                fetchOptions.body = JSON.stringify(encryptPayloadObject(options.encryptedJson, timestamp));
+            }
+
+            let response;
+            try {
+                response = await fetch(authUrl(url, timestamp), { ...fetchOptions, headers, cache: 'no-store', redirect: 'manual', credentials: 'omit' });
+            } catch (e) {
+                throw e;
+            }
+
+            if (response.type === 'opaqueredirect' || response.redirected || [301, 302, 303, 307, 308].includes(response.status)) {
+                failAuthAndRedirect('认证失败，请重新登录');
+            }
+
+            const text = await response.text();
+            let wrapped = null;
+            try { wrapped = text ? JSON.parse(text) : null; } catch (_) {}
+
+            if (response.status === 401 || response.status === 403 || isAuthFailurePayload(wrapped)) {
+                failAuthAndRedirect((wrapped && wrapped.error) || '认证失败，请重新登录', (wrapped && wrapped.login) || '/login.html');
+            }
+            if (!response.ok) {
+                throw new Error((wrapped && wrapped.error) || `请求失败 ${response.status}`);
+            }
+            if (wrapped && wrapped.payload && wrapped.timestamp) {
+                try {
+                    return decryptPayload(wrapped.payload, wrapped.timestamp);
+                } catch (e) {
+                    failAuthAndRedirect('认证信息错误，请重新登录');
+                }
+            }
+            return wrapped;
+        }
+
+        function ensureLoggedInOnPage() {
+            const { username, password } = getAuthCredentials();
+            if (!username || !password) {
+                failAuthAndRedirect('未登录');
+            }
+        }
+
+        ensureLoggedInOnPage();
+
+        const DEFAULT_UI_CONFIG = {
+            autoSaveDelayMs: 600000,
+            hookMessagePollIntervalMs: 2500,
+            hookSuccessMessageDurationMs: 60000,
+            toastVisibleMs: 2000,
+            toastFadeMs: 300,
+            pullRefreshLockMs: 800,
+            statusResetDelayMs: 2000,
+            saveButtonResetDelayMs: 1500,
+            errorButtonResetDelayMs: 2000,
+            pasteFormatDelayMs: 10,
+            lineBreakFormatDelayMs: 0,
+            touchStatsDelayMs: 0,
+            hiddenAutoSaveCheckIntervalMs: 1000
+        };
+        let UI_CONFIG = { ...DEFAULT_UI_CONFIG };
+
+        async function loadUIConfig() {
+            try {
+                const data = await authFetch('/ui-config.json');
+                if (!data || typeof data !== 'object') return;
+                UI_CONFIG = { ...DEFAULT_UI_CONFIG, ...data };
+            } catch (e) {
+                UI_CONFIG = { ...DEFAULT_UI_CONFIG };
+            }
+        }
+
+        // ---------- 核心排序：数字/小数序号优先 ----------
+        // 章节名支持两种格式：
+        // 1) 普通字符串，例如：风起云涌
+        // 2) 数字序号 + 分隔符 + 标题，例如：1. 风起、2, 风起、3 风起、1.5 风起
+        // 排序规则：
+        // - 能从开头匹配到序号：按 parseFloat 后的数值排序，默认从大到小
+        // - 匹配不到序号：不参与升降序，始终排在最后，并按完整章节名字典序排序
+        function extractNumberFromName(name) {
+            if (!name) return null;
+            const text = String(name).trim();
+            // 匹配开头数字，支持小数；数字后面可以没有字符，也可以跟空格、点、逗号、顿号、冒号、短横线等分隔符。
+            // 例如："1"、"1.5"、"1. 风起"、"2, 风起"、"3 风起"、"4、风起"
+            const match = text.match(/^(\d+(?:\.\d+)?)(?:$|[\s.,，、:：;；_\-—–|/\\]+|(?=\D))/);
+            if (!match) return null;
+            const value = parseFloat(match[1]);
+            return Number.isFinite(value) ? value : null;
+        }
+
+        function compareChapterNames(nameA, nameB) {
+            return nameA.localeCompare(nameB, 'zh-CN', { numeric: true, sensitivity: 'base' });
+        }
+
+        function sortChaptersByRules(chaptersArray) {
+            return chaptersArray.slice().sort((a, b) => {
+                const nameA = a?.name || '';
+                const nameB = b?.name || '';
+                const numA = extractNumberFromName(nameA);
+                const numB = extractNumberFromName(nameB);
+                const hasNumA = numA !== null;
+                const hasNumB = numB !== null;
+
+                if (hasNumA && hasNumB) {
+                    if (numA !== numB) {
+                        return sortOrder === 'desc' ? numB - numA : numA - numB;
+                    }
+                    // 序号相同时，用完整章节名做稳定的字典序兜底。
+                    return compareChapterNames(nameA, nameB);
+                }
+
+                // 无序号章节无论升序/降序都排在末尾。
+                if (hasNumA && !hasNumB) return -1;
+                if (!hasNumA && hasNumB) return 1;
+
+                // 都无序号：始终按字典序。
+                return compareChapterNames(nameA, nameB);
+            });
+        }
+
+        function updateSortToggleButton() {
+            const btn = document.getElementById('sortToggleBtn');
+            if (!btn) return;
+            btn.textContent = sortOrder === 'desc' ? '降序' : '升序';
+        }
+
+        function toggleSortOrder() {
+            sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            localStorage.setItem('chapterSortOrder', sortOrder);
+            updateSortToggleButton();
+            loadChapters(false);
+        }
+
+        // ---------- 全局变量 ----------
+        let isLoading = false;
+        let sortOrder = localStorage.getItem('chapterSortOrder') || 'desc';
+        if (sortOrder !== 'asc' && sortOrder !== 'desc') sortOrder = 'desc';
+        
+        async function loadChapters(showLoading = true) {
+            if (isLoading) return;
+            const container = document.getElementById('chaptersList');
+            if (showLoading) {
+                container.innerHTML = `
+                    <div class="skeleton-card"><div class="skeleton-row"><div class="skeleton-title"></div><div class="skeleton-buttons"><div class="skeleton-btn"></div><div class="skeleton-btn"></div><div class="skeleton-btn"></div><div class="skeleton-btn"></div></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-row"><div class="skeleton-title"></div><div class="skeleton-buttons"><div class="skeleton-btn"></div><div class="skeleton-btn"></div><div class="skeleton-btn"></div><div class="skeleton-btn"></div></div></div></div>
+                `;
+            }
+            isLoading = true;
+            try {
+                const data = await authFetch('/api/chapters');
+                if (data.success && data.data.length > 0) {
+                    // 关键：先按规则排序
+                    let sortedList = sortChaptersByRules(data.data);
+                    // 调试输出（可选，可在控制台查看排序结果）
+                    console.log(`排序后的章节顺序(${sortOrder}):`, sortedList.map(c => c.name));
+                    renderChapters(sortedList);
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="no-chapters-icon"></div>
+                            <h3 style="margin-bottom: 8px;">空空如也</h3>
+                            <p style="font-size: 0.9rem;">点击上方创建首个章节</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 2.5rem;">⚠️</div>
+                        <h3>加载失败</h3>
+                        <button onclick="loadChapters()" style="margin-top:12px; padding:8px 16px; background:#667eea; color:white; border:none; border-radius:30px;">重试</button>
+                    </div>
+                `;
+                showToast('网络错误', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+        
+        // 渲染：章节名 + 三个按钮（章纲、正文、删除）全部在一行
+        function renderChapters(chapters) {
+            const container = document.getElementById('chaptersList');
+            if (!container) return;
+            container.innerHTML = '';
+            chapters.forEach((chapter) => {
+                const card = document.createElement('div');
+                card.className = 'chapter-card';
+                const numberVal = extractNumberFromName(chapter.name);
+                const badgeHtml = numberVal !== null ? `<span class="badge-number">#${numberVal}</span>` : '';
+                const displayName = escapeHtml(chapter.name);
+                
+                card.innerHTML = `
+                    <div class="chapter-row">
+                        <div class="chapter-name-area" onclick="renameChapter('${escapeHtml(chapter.name)}')" title="点击重命名章节">
+                            <div class="chapter-name-text">
+                                ${displayName} ${badgeHtml}
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-compact btn-outline-compact" onclick="event.stopPropagation(); editOutline('${escapeHtml(chapter.name)}')">
+                                章纲
+                            </button>
+                            <button class="btn-compact btn-body-compact" onclick="event.stopPropagation(); editBody('${escapeHtml(chapter.name)}')">
+                                正文
+                            </button>
+                            <button class="btn-compact btn-delete-compact" onclick="event.stopPropagation(); deleteChapter('${escapeHtml(chapter.name)}')">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showToast(msg, type = 'success') {
+            const exist = document.querySelector('.toast');
+            if (exist) exist.remove();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), UI_CONFIG.toastFadeMs);
+            }, UI_CONFIG.toastVisibleMs);
+        }
+        
+        // 创建章节（自动序号）
+        async function addChapter() {
+            const input = document.getElementById('newChapterName');
+            const name = input.value.trim();
+            if (!name) {
+                showToast('请输入章节名称', 'error');
+                return;
+            }
+            // 去掉非法字符检查（后端也会检查）
+            try {
+                const data = await authFetch('/api/chapters', {
+                    method: 'POST',
+                    encryptedJson: { name: name }
+                });
+                if (data.success) {
+                    showToast('章节创建成功');
+                    input.value = '';
+                    await loadChapters(); // 刷新列表
+                } else {
+                    showToast('创建失败: ' + (data.error || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showToast('创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function deleteChapter(name) {
+            if (confirm(`确认删除章节「${name}」吗？`)) {
+                try {
+                    const data = await authFetch('/api/chapters/' + encodeURIComponent(name), { method: 'DELETE' });
+                    if (data.success) {
+                        showToast('已删除', 'success');
+                        await loadChapters(false);
+                    } else {
+                        showToast('删除失败', 'error');
+                    }
+                } catch(e) {
+                    showToast('删除出错', 'error');
+                }
+            }
+        }
+        
+        async function renameChapter(oldName) {
+            const newName = prompt('修改章节名称：', oldName);
+            if (!newName || newName === oldName) return;
+            if (newName.includes('/') || newName.includes('\\')) {
+                showToast('名称包含非法字符', 'error');
+                return;
+            }
+            try {
+                const data = await authFetch('/api/chapters/' + encodeURIComponent(oldName), {
+                    method: 'POST',
+                    encryptedJson: { new_name: newName }
+                });
+                if (data.success) {
+                    showToast('重命名成功', 'success');
+                    await loadChapters(false);
+                } else {
+                    showToast('重命名失败: ' + (data.error || '服务器错误'), 'error');
+                }
+            } catch(e) {
+                showToast('网络错误', 'error');
+            }
+        }
+        
+        function editOutline(chapterName) {
+            window.location.href = authUrl(`/edit.html?chapter=${encodeURIComponent(chapterName)}&type=outline`);
+        }
+        
+        function editBody(chapterName) {
+            window.location.href = authUrl(`/edit.html?chapter=${encodeURIComponent(chapterName)}&type=body`);
+        }
+        
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') addChapter();
+        }
+        
+
+        function base64ToBlob(base64, contentType) {
+            const bytes = base64ToBytes(base64);
+            return new Blob([bytes], { type: contentType || 'application/octet-stream' });
+        }
+
+        async function downloadFullDocx(type) {
+            const label = type === 'outline' ? '章纲' : '正文';
+            showToast(`正在生成${label}全文 DOCX...`, 'success');
+            try {
+                const data = await authFetch(`/api/export/${type}.docx?order=asc`);
+                if (!data || !data.success) {
+                    showToast('下载失败: ' + ((data && data.error) || '未知错误'), 'error');
+                    return;
+                }
+                const blob = base64ToBlob(data.data_base64 || '', data.content_type);
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = data.filename || (type === 'outline' ? '章纲全文.docx' : '正文全文.docx');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                showToast('下载失败: ' + e.message, 'error');
+            }
+        }
+        
+        // 下拉刷新简单逻辑
+        let touchStart = 0, refreshingFlag = false;
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0) touchStart = e.touches[0].clientY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (window.scrollY === 0 && !refreshingFlag && touchStart) {
+                const diff = e.touches[0].clientY - touchStart;
+                if (diff > 60) {
+                    refreshingFlag = true;
+                    loadChapters();
+                    setTimeout(() => { refreshingFlag = false; }, UI_CONFIG.pullRefreshLockMs);
+                }
+            }
+        });
+        
+        let indexPageStarted = false;
+        async function startIndexPageOnce() {
+            if (indexPageStarted) return;
+            indexPageStarted = true;
+            await loadUIConfig();
+            updateSortToggleButton();
+            loadChapters();
+            startHookMessagePolling();
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', startIndexPageOnce);
+        } else {
+            startIndexPageOnce();
+        }
+
+        // 兜底：某些移动端浏览器/缓存恢复场景可能不重新触发 DOMContentLoaded。
+        window.addEventListener('pageshow', () => {
+            startIndexPageOnce();
+            startHookMessagePolling();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                loadChapters(false);
+                startHookMessagePolling();
+                pollHookMessages();
+            }
+        });
+
+
+        const HOOK_MESSAGE_LAST_ID_KEY = 'novelEditorHookMessageLastId';
+        let hookMessagePollingTimer = null;
+
+
+        function hookEscapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function getHookOperationLabel(operation) {
+            const labels = {
+                create_chapter: '创建章节',
+                rename_chapter: '重命名章节',
+                delete_chapter: '删除章节',
+                save_outline: '保存章纲',
+                save_body: '保存正文'
+            };
+            return labels[operation] || operation || 'Hook';
+        }
+
+        function showHookMessageToast(message) {
+            let panel = document.getElementById('hookMessagePanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'hookMessagePanel';
+                panel.className = 'hook-message-panel';
+                document.body.appendChild(panel);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'hook-message-card' + (message.success ? '' : ' error');
+            const title = `${getHookOperationLabel(message.operation)} ${message.success ? '完成' : '失败'}`;
+            const exitText = typeof message.exit_code === 'number' ? `code ${message.exit_code}` : '';
+            card.innerHTML = `
+                <div class="hook-message-title">
+                    <span>${hookEscapeHtml(title)} ${hookEscapeHtml(exitText)}</span>
+                    <button class="hook-message-close" type="button" aria-label="关闭">×</button>
+                </div>
+                <div class="hook-message-text">${hookEscapeHtml(message.message || '')}</div>
+            `;
+            card.querySelector('.hook-message-close').onclick = () => card.remove();
+            panel.appendChild(card);
+            while (panel.children.length > 5) panel.firstElementChild.remove();
+            if (message.success) {
+                setTimeout(() => {
+                    if (card.parentNode) card.remove();
+                }, UI_CONFIG.hookSuccessMessageDurationMs);
+            }
+        }
+
+        async function pollHookMessages() {
+            try {
+                const since = Number(localStorage.getItem(HOOK_MESSAGE_LAST_ID_KEY) || '0') || 0;
+                const data = await authFetch(`/api/hook-messages?since=${since}`, { cache: 'no-store' });
+                if (!data.success || !Array.isArray(data.messages)) return;
+
+                let maxId = since;
+                for (const msg of data.messages) {
+                    if (typeof msg.id === 'number' && msg.id > maxId) maxId = msg.id;
+                    showHookMessageToast(msg);
+                }
+                if (maxId > since) {
+                    localStorage.setItem(HOOK_MESSAGE_LAST_ID_KEY, String(maxId));
+                }
+            } catch (e) {
+                // 轮询失败不影响主功能
+            }
+        }
+
+        function startHookMessagePolling() {
+            if (hookMessagePollingTimer) return;
+            const interval = Number(UI_CONFIG.hookMessagePollIntervalMs) > 0
+                ? Number(UI_CONFIG.hookMessagePollIntervalMs)
+                : DEFAULT_UI_CONFIG.hookMessagePollIntervalMs;
+            pollHookMessages();
+            hookMessagePollingTimer = setInterval(pollHookMessages, interval);
+        }
+
+    </script>
+</body>
+</html>

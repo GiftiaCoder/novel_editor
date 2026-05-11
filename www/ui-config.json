@@ -1,0 +1,15 @@
+{
+  "autoSaveDelayMs": 600000,
+  "hookMessagePollIntervalMs": 2500,
+  "hookSuccessMessageDurationMs": 60000,
+  "toastVisibleMs": 2000,
+  "toastFadeMs": 300,
+  "pullRefreshLockMs": 800,
+  "statusResetDelayMs": 2000,
+  "saveButtonResetDelayMs": 1500,
+  "errorButtonResetDelayMs": 2000,
+  "pasteFormatDelayMs": 10,
+  "lineBreakFormatDelayMs": 0,
+  "touchStatsDelayMs": 0,
+  "hiddenAutoSaveCheckIntervalMs": 1000
+}
