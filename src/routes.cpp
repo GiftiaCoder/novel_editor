@@ -82,18 +82,24 @@ void register_routes(httplib::Server& svr, const std::vector<CommandHook>& comma
                 // 检查是否存在章纲和正文
                 fs::path outline_path = fs::path(FLAGS_content_root) / "latest" / chapter_name / "outline";
                 fs::path body_path = fs::path(FLAGS_content_root) / "latest" / chapter_name / "body";
+                fs::path summary_path = fs::path(FLAGS_content_root) / "latest" / chapter_name / "summary";
             
                 chapter_json["outline_exists"] = fs::exists(outline_path);
                 chapter_json["body_exists"] = fs::exists(body_path);
-            
-                // 读取预览内容（安全版本）
-                if (fs::exists(outline_path)) {
-                    std::string content = safe_read_file(outline_path);
-                    chapter_json["outline_preview"] = get_safe_preview(content);
+                if (fs::exists(summary_path)) {
+                    chapter_json["summary"] = safe_read_file(summary_path);
                 } else {
-                    chapter_json["outline_preview"] = "";
+                    chapter_json["summary"] = "";
                 }
             
+                // 读取预览内容（安全版本）
+                // if (fs::exists(outline_path)) {
+                //     std::string content = safe_read_file(outline_path);
+                //     chapter_json["outline_preview"] = get_safe_preview(content);
+                // } else {
+                //     chapter_json["outline_preview"] = "";
+                // }
+
                 if (fs::exists(body_path)) {
                     std::string content = safe_read_file(body_path);
                     chapter_json["body_preview"] = get_safe_preview(content);
